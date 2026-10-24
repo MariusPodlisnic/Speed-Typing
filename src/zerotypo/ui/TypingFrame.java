@@ -117,6 +117,19 @@ public class TypingFrame extends JFrame {
             timer.start();
         }
 
+        // --- NEW IN COMMIT 6: Dynamic Appending ---
+        if (targetText.length() - typed.length() < 50) {
+            String newWords = " " + wordGenerator.generateWords(15);
+            targetText += newWords;
+
+            try {
+                StyledDocument doc = textDisplay.getStyledDocument();
+                doc.insertString(doc.getLength(), newWords, null);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+
         highlightText(typed);
     }
 
