@@ -92,7 +92,7 @@ public class TypingFrame extends JFrame {
             timer.stop();
         }
 
-        targetText = wordGenerator.generateWords(30);
+        targetText = wordGenerator.generateText(3);
         textDisplay.setText(targetText);
 
         Runnable resetInput = () -> {
@@ -117,14 +117,13 @@ public class TypingFrame extends JFrame {
             timer.start();
         }
 
-        // --- NEW IN COMMIT 6: Dynamic Appending ---
-        if (targetText.length() - typed.length() < 50) {
-            String newWords = " " + wordGenerator.generateWords(15);
-            targetText += newWords;
+        if (targetText.length() - typed.length() < 80) {
+            String newText = " " + wordGenerator.generateText(2);
+            targetText += newText;
 
             try {
                 StyledDocument doc = textDisplay.getStyledDocument();
-                doc.insertString(doc.getLength(), newWords, null);
+                doc.insertString(doc.getLength(), newText, null);
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
