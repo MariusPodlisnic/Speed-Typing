@@ -20,6 +20,7 @@ public class TypingFrame extends JFrame {
     private JLabel wpmLabel;
     private JLabel accuracyLabel;
     private JButton restartButton;
+    private JButton themeButton;
     private JComboBox<String> timeSelector;
 
     private String targetText;
@@ -30,18 +31,21 @@ public class TypingFrame extends JFrame {
     private int timeLeft = 30;
     private boolean isRunning = false;
     private long startTime = 0;
+    private boolean isDarkMode = false;
 
     public TypingFrame() {
         wordGenerator = new WordGenerator();
 
         setTitle("ZeroTypo");
-        setSize(800, 450);
+        // --- CHANGED: Increased window width to give the top bar breathing room ---
+        setSize(950, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         initComponents();
         setupTimer();
         startNewTest();
+        applyTheme();
     }
 
     private void initComponents() {
@@ -50,36 +54,41 @@ public class TypingFrame extends JFrame {
 
         topPanel = new JPanel(new BorderLayout());
 
-        statsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
+        statsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         wpmLabel = new JLabel("WPM: 0");
-        wpmLabel.setFont(new Font("Monospaced", Font.BOLD, 20));
+        wpmLabel.setFont(new Font("Monospaced", Font.BOLD, 18));
         accuracyLabel = new JLabel("Acc: 0%");
-        accuracyLabel.setFont(new Font("Monospaced", Font.BOLD, 20));
+        accuracyLabel.setFont(new Font("Monospaced", Font.BOLD, 18));
         statsPanel.add(wpmLabel);
         statsPanel.add(accuracyLabel);
 
         timerLabel = new JLabel("Time: " + selectedDuration);
-        timerLabel.setFont(new Font("Monospaced", Font.BOLD, 28));
+        timerLabel.setFont(new Font("Monospaced", Font.BOLD, 24));
         timerLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        timerLabel.setForeground(new Color(100, 100, 100));
 
-        controlPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        controlPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
 
         String[] timeOptions = {"30s", "1m", "1m 30s", "2m"};
         timeSelector = new JComboBox<>(timeOptions);
-        timeSelector.setFont(new Font("Monospaced", Font.BOLD, 16));
+        timeSelector.setFont(new Font("Monospaced", Font.BOLD, 14));
         timeSelector.setFocusable(false);
         timeSelector.addActionListener(e -> {
             updateSelectedDuration();
             startNewTest();
         });
 
+        themeButton = new JButton("🌙 Dark");
+        themeButton.setFont(new Font("Monospaced", Font.BOLD, 14));
+        themeButton.setFocusable(false);
+        themeButton.addActionListener(e -> toggleTheme());
+
         restartButton = new JButton("Restart");
-        restartButton.setFont(new Font("Monospaced", Font.BOLD, 16));
+        restartButton.setFont(new Font("Monospaced", Font.BOLD, 14));
         restartButton.setFocusable(false);
         restartButton.addActionListener(e -> startNewTest());
 
         controlPanel.add(timeSelector);
+        controlPanel.add(themeButton);
         controlPanel.add(restartButton);
 
         topPanel.add(statsPanel, BorderLayout.WEST);
@@ -91,9 +100,16 @@ public class TypingFrame extends JFrame {
         textDisplay.setEditable(false);
         textDisplay.setFocusable(false);
 
+        JScrollPane scrollPane = new JScrollPane(textDisplay);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+
         inputField = new JTextField();
         inputField.setFont(new Font("Monospaced", Font.PLAIN, 24));
         inputField.setHorizontalAlignment(JTextField.CENTER);
+        inputField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(150, 150, 150), 1),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
 
         inputField.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { checkTyping(); }
@@ -102,9 +118,39 @@ public class TypingFrame extends JFrame {
         });
 
         mainPanel.add(topPanel, BorderLayout.NORTH);
-        mainPanel.add(new JScrollPane(textDisplay), BorderLayout.CENTER);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
         mainPanel.add(inputField, BorderLayout.SOUTH);
         add(mainPanel);
+    }
+
+    private void toggleTheme() {
+        isDarkMode = !isDarkMode;
+        applyTheme();
+    }
+
+    private void applyTheme() {
+        Color bg = isDarkMode ? new Color(30, 30, 30) : new Color(245, 245, 245);
+        Color fg = isDarkMode ? new Color(210, 210, 210) : new Color(50, 50, 50);
+        Color inputBg = isDarkMode ? new Color(45, 45, 45) : Color.WHITE;
+
+        mainPanel.setBackground(bg);
+        topPanel.setBackground(bg);
+        statsPanel.setBackground(bg);
+        controlPanel.setBackground(bg);
+
+        textDisplay.setBackground(bg);
+
+        inputField.setBackground(inputBg);
+        inputField.setForeground(fg);
+        inputField.setCaretColor(fg);
+
+        wpmLabel.setForeground(fg);
+        accuracyLabel.setForeground(fg);
+        timerLabel.setForeground(fg);
+
+        themeButton.setText(isDarkMode ? "☀️ Light" : "🌙 Dark");
+
+        highlightText(inputField.getText());
     }
 
     private void updateSelectedDuration() {
@@ -210,17 +256,19 @@ public class TypingFrame extends JFrame {
     }
 
     private void highlightText(String typed) {
+        if (targetText == null) return;
+
         StyledDocument doc = textDisplay.getStyledDocument();
 
         Style defaultStyle = textDisplay.addStyle("Default", null);
-        StyleConstants.setForeground(defaultStyle, Color.GRAY);
+        StyleConstants.setForeground(defaultStyle, isDarkMode ? new Color(130, 130, 130) : Color.GRAY);
 
         Style correctStyle = textDisplay.addStyle("Correct", null);
         StyleConstants.setForeground(correctStyle, new Color(40, 167, 69));
 
         Style incorrectStyle = textDisplay.addStyle("Incorrect", null);
-        StyleConstants.setForeground(incorrectStyle, Color.RED);
-        StyleConstants.setBackground(incorrectStyle, new Color(255, 200, 200));
+        StyleConstants.setForeground(incorrectStyle, isDarkMode ? new Color(255, 80, 80) : Color.RED);
+        StyleConstants.setBackground(incorrectStyle, isDarkMode ? new Color(80, 20, 20) : new Color(255, 200, 200));
 
         doc.setCharacterAttributes(0, targetText.length(), defaultStyle, true);
 
