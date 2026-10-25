@@ -12,9 +12,12 @@ import java.awt.*;
 public class TypingFrame extends JFrame {
     private JPanel mainPanel;
     private JPanel topPanel;
+    private JPanel statsPanel;
     private JTextPane textDisplay;
     private JTextField inputField;
     private JLabel timerLabel;
+    private JLabel wpmLabel;
+    private JLabel accuracyLabel;
     private JButton restartButton;
 
     private String targetText;
@@ -23,6 +26,7 @@ public class TypingFrame extends JFrame {
     private Timer timer;
     private int timeLeft = 30;
     private boolean isRunning = false;
+    private long startTime = 0;
 
     public TypingFrame() {
         wordGenerator = new WordGenerator();
@@ -43,6 +47,14 @@ public class TypingFrame extends JFrame {
 
         topPanel = new JPanel(new BorderLayout());
 
+        statsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
+        wpmLabel = new JLabel("WPM: 0");
+        wpmLabel.setFont(new Font("Monospaced", Font.BOLD, 20));
+        accuracyLabel = new JLabel("Acc: 0%");
+        accuracyLabel.setFont(new Font("Monospaced", Font.BOLD, 20));
+        statsPanel.add(wpmLabel);
+        statsPanel.add(accuracyLabel);
+
         timerLabel = new JLabel("Time: 30");
         timerLabel.setFont(new Font("Monospaced", Font.BOLD, 28));
         timerLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -53,6 +65,7 @@ public class TypingFrame extends JFrame {
         restartButton.setFocusable(false);
         restartButton.addActionListener(e -> startNewTest());
 
+        topPanel.add(statsPanel, BorderLayout.WEST);
         topPanel.add(timerLabel, BorderLayout.CENTER);
         topPanel.add(restartButton, BorderLayout.EAST);
 
@@ -81,6 +94,7 @@ public class TypingFrame extends JFrame {
         timer = new Timer(1000, e -> {
             timeLeft--;
             timerLabel.setText("Time: " + timeLeft);
+            updateLiveStats();
             if (timeLeft <= 0) {
                 endTest();
             }
@@ -104,7 +118,10 @@ public class TypingFrame extends JFrame {
 
         timeLeft = 30;
         timerLabel.setText("Time: " + timeLeft);
+        wpmLabel.setText("WPM: 0");
+        accuracyLabel.setText("Acc: 0%");
         isRunning = false;
+        startTime = 0;
 
         highlightText("");
     }
@@ -114,6 +131,7 @@ public class TypingFrame extends JFrame {
 
         if (!isRunning && typed.length() > 0 && inputField.isEditable()) {
             isRunning = true;
+            startTime = System.currentTimeMillis();
             timer.start();
         }
 
@@ -130,6 +148,37 @@ public class TypingFrame extends JFrame {
         }
 
         highlightText(typed);
+
+        if (isRunning) {
+            updateLiveStats();
+        }
+    }
+
+    private void updateLiveStats() {
+        String typed = inputField.getText();
+        if (typed.isEmpty() || startTime == 0) return;
+
+        int correctChars = 0;
+        int checkLength = Math.min(typed.length(), targetText.length());
+
+        for (int i = 0; i < checkLength; i++) {
+            if (typed.charAt(i) == targetText.charAt(i)) {
+                correctChars++;
+            }
+        }
+
+        long now = System.currentTimeMillis();
+        double elapsedMinutes = (now - startTime) / 60000.0;
+
+        double wpm = 0;
+        if (elapsedMinutes > 0) {
+            wpm = (correctChars / 5.0) / elapsedMinutes;
+        }
+
+        double accuracy = ((double) correctChars / typed.length()) * 100;
+
+        wpmLabel.setText(String.format("WPM: %.0f", wpm));
+        accuracyLabel.setText(String.format("Acc: %.1f%%", accuracy));
     }
 
     private void highlightText(String typed) {
@@ -165,19 +214,45 @@ public class TypingFrame extends JFrame {
 
         String typed = inputField.getText();
         int correctChars = 0;
+        int incorrectChars = 0;
         int checkLength = Math.min(typed.length(), targetText.length());
 
         for (int i = 0; i < checkLength; i++) {
             if (typed.charAt(i) == targetText.charAt(i)) {
                 correctChars++;
+            } else {
+                incorrectChars++;
             }
         }
 
         double wpm = (correctChars / 5.0) / 0.5;
         double accuracy = typed.length() == 0 ? 0 : ((double) correctChars / typed.length()) * 100;
 
-        String message = String.format("Time's up!\n\nWPM: %.0f\nAccuracy: %.1f%%", wpm, accuracy);
-        JOptionPane.showMessageDialog(this, message, "Test Complete", JOptionPane.INFORMATION_MESSAGE);
+        // --- NEW IN COMMIT 9: Custom Results Panel ---
+        JPanel resultPanel = new JPanel(new GridLayout(4, 1, 10, 10));
+        resultPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel titleLabel = new JLabel("Test Complete!", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Monospaced", Font.BOLD, 28));
+
+        JLabel wpmResult = new JLabel(String.format("WPM: %.0f", wpm), SwingConstants.CENTER);
+        wpmResult.setFont(new Font("Monospaced", Font.BOLD, 36));
+        wpmResult.setForeground(new Color(40, 167, 69));
+
+        JLabel accResult = new JLabel(String.format("Accuracy: %.1f%%", accuracy), SwingConstants.CENTER);
+        accResult.setFont(new Font("Monospaced", Font.BOLD, 24));
+
+        JLabel statsResult = new JLabel("Correct: " + correctChars + "  |  Incorrect: " + incorrectChars, SwingConstants.CENTER);
+        statsResult.setFont(new Font("Monospaced", Font.PLAIN, 16));
+        statsResult.setForeground(Color.GRAY);
+
+        resultPanel.add(titleLabel);
+        resultPanel.add(wpmResult);
+        resultPanel.add(accResult);
+        resultPanel.add(statsResult);
+
+        // Display the custom panel inside a generic JOptionPane wrapper
+        JOptionPane.showMessageDialog(this, resultPanel, "ZeroTypo Results", JOptionPane.PLAIN_MESSAGE);
 
         startNewTest();
     }
