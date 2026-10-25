@@ -19,9 +19,11 @@ public class TypingFrame extends JFrame {
     private JLabel timerLabel;
     private JLabel wpmLabel;
     private JLabel accuracyLabel;
-    private JButton restartButton;
-    private JButton themeButton;
+
+    private JComboBox<String> diffSelector;
     private JComboBox<String> timeSelector;
+    private JButton themeButton;
+    private JButton restartButton;
 
     private String targetText;
     private WordGenerator wordGenerator;
@@ -37,7 +39,6 @@ public class TypingFrame extends JFrame {
         wordGenerator = new WordGenerator();
 
         setTitle("ZeroTypo");
-        // --- CHANGED: Increased window width to give the top bar breathing room ---
         setSize(950, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -68,6 +69,13 @@ public class TypingFrame extends JFrame {
 
         controlPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
 
+        String[] diffOptions = {"Easy", "Medium", "Hard"};
+        diffSelector = new JComboBox<>(diffOptions);
+        diffSelector.setFont(new Font("Monospaced", Font.BOLD, 14));
+        diffSelector.setFocusable(false);
+        diffSelector.setSelectedItem("Medium");
+        diffSelector.addActionListener(e -> startNewTest());
+
         String[] timeOptions = {"30s", "1m", "1m 30s", "2m"};
         timeSelector = new JComboBox<>(timeOptions);
         timeSelector.setFont(new Font("Monospaced", Font.BOLD, 14));
@@ -87,6 +95,7 @@ public class TypingFrame extends JFrame {
         restartButton.setFocusable(false);
         restartButton.addActionListener(e -> startNewTest());
 
+        controlPanel.add(diffSelector);
         controlPanel.add(timeSelector);
         controlPanel.add(themeButton);
         controlPanel.add(restartButton);
@@ -180,7 +189,8 @@ public class TypingFrame extends JFrame {
             timer.stop();
         }
 
-        targetText = wordGenerator.generateText(3);
+        String selectedDiff = (String) diffSelector.getSelectedItem();
+        targetText = wordGenerator.generateText(3, selectedDiff);
         textDisplay.setText(targetText);
 
         Runnable resetInput = () -> {
@@ -210,7 +220,8 @@ public class TypingFrame extends JFrame {
         }
 
         if (targetText.length() - typed.length() < 80) {
-            String newText = " " + wordGenerator.generateText(2);
+            String selectedDiff = (String) diffSelector.getSelectedItem();
+            String newText = " " + wordGenerator.generateText(2, selectedDiff);
             targetText += newText;
 
             try {
